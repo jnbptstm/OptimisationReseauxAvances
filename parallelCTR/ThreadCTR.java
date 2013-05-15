@@ -15,7 +15,7 @@ public class ThreadCTR implements Runnable{
 	
 	public ThreadCTR(){}
 	
-	public ThreadCTR(byte[] plainTextBloc, int numBloc128, File cipheredText, SecretKey aesSecretKey, Cipher encryptCipher){
+	public ThreadCTR(byte[] plainTextBloc, int numBloc128, File cipheredText, SecretKey aesSecretKey, Cipher encryptCipher, byte[] initializationVectorIncremented){
 		this.plainTextBloc = plainTextBloc;
 		this.numBloc128 = numBloc128;
 		this.cipheredText = cipheredText;
@@ -25,7 +25,10 @@ public class ThreadCTR implements Runnable{
 	
 	@Override
 	public void run() {
-		
+		System.out.println("Thread number: "+Thread.currentThread().getId());
+		try { Thread.sleep(10);
+			System.out.println("Fini de dormir");
+		} catch (InterruptedException e) { e.printStackTrace(); }
 	}
 
 }

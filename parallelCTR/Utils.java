@@ -3,6 +3,8 @@ package parallelCTR;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
+import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import java.security.SecureRandom;
 
@@ -41,19 +43,21 @@ public class Utils {
 	}
 	
 	
-	public static byte[][] ivsIncremented(int numberOfIv, int lengthOfIv){
+	public static byte[][] ivsIncremented(int numberOfIv, int lengthOfIv) throws UnsupportedEncodingException{
 		
 		byte[][] initializationVectorIncremented = new byte[numberOfIv][lengthOfIv];
 		byte initializationVector[] = new byte [lengthOfIv];
 		new SecureRandom().nextBytes(initializationVector);
 		
 		for(int i=0 ; i<initializationVector.length ; i++){ System.out.print(initializationVector[i]+" "); }
+		System.out.println();
+		BigInteger bigIntegerIV = new BigInteger(initializationVector);
 		
-		// Byte[] to Long
-		long longInitializationVector = ByteBuffer.wrap(initializationVector).getLong(); // On stocke l'IV dans un long pour pouvoir l'incrémenter.
 		for(int i = 0 ; i < numberOfIv; i++){
-			//Long to Byte[]
-			ByteBuffer.wrap(initializationVector).putLong(longInitializationVector++);
+			
+			bigIntegerIV = bigIntegerIV.add(BigInteger.ONE);
+			initializationVector = bigIntegerIV.toByteArray();
+			
 			for(int j = 0 ; j < initializationVector.length ; j++){
 				initializationVectorIncremented[i][j] = initializationVector[j];
 			}
