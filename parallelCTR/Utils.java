@@ -22,23 +22,19 @@ public class Utils {
 		byte tmp[] = new byte[16];
 		FileInputStream fis = new FileInputStream(file);
 		fileLengthInBytes = fis.available();
-		//System.out.println("File length: "+fileLengthInBytes+" bytes");
 		nombreBloc128 = fileLengthInBytes / 16;
-		//System.out.println("Number of 128-bits blocs: "+nombreBloc128);
 		byte[][] bloc128 = new byte[nombreBloc128][16];
 		
 		for(int i=0 ; i<nombreBloc128 ; i++){
 			fis.read(tmp);
 			for(int j=0 ; j<tmp.length ; j++){
 				bloc128[i][j] = tmp[j];
-				//System.out.print(bloc128[i][j]+" ");
 				tmp[j] = '\0';
 			}
-			//System.out.println("\n"+ bloc128[i].length+" "+new String(bloc128[i], "UTF-8")+"\n");
 		}
 		fis.read(blocInf128);
 		fis.close();
-		//System.out.println("\n"+blocInf128.length+" "+ new String(blocInf128, "UTF-8")+"\n");
+
 		return bloc128;
 	}
 	

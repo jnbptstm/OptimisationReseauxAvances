@@ -1,29 +1,32 @@
 package parallelCTR;
 
-import gnu.crypto.cipher.Anubis;
-
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
-import java.nio.ByteBuffer;
+import java.security.InvalidAlgorithmParameterException;
+import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
-import java.security.SecureRandom;
-import java.util.ArrayList;
 import java.util.Scanner;
 
+import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
+import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.KeyGenerator;
 import javax.crypto.NoSuchPaddingException;
 import javax.crypto.SecretKey;
+import javax.crypto.spec.IvParameterSpec;
 
 public class Main{
 
+	public static byte[][] cipheredBloc128;
+	
 	public static void main (String args[]) throws NoSuchAlgorithmException, IOException, NoSuchPaddingException{
 		
-		int numberOfThread = 6; // Number of thread
-//		System.out.println("Nombre de threads désirés? ("+Runtime.getRuntime().availableProcessors()+" conseillés)");
-//		Scanner sc = new Scanner(System.in);
-//		numberOfThread = sc.nextInt();
+		int numberOfThread; // Number of thread
+		System.out.println("Nombre de threads désirés? ("+Runtime.getRuntime().availableProcessors()+" conseillés)");
+		Scanner sc = new Scanner(System.in);
+		numberOfThread = sc.nextInt();
 		Thread tabThread[] = new Thread[numberOfThread];
 		for(int i=0 ; i<tabThread.length ; i++) {
 			tabThread[i] = new Thread();
@@ -34,7 +37,7 @@ public class Main{
 		File plainText = new File("test.txt");
 		byte[] blocInf128 = new byte[new FileInputStream(plainText).available() % 16];
 		blocs128 = Utils.splitFile(plainText, blocInf128);
-		// byte[] blocInf128 = new byte[new FileInputStream(file).available() % 16];
+		cipheredBloc128 = new byte[blocs128.length][blocs128[0].length];
 		System.out.println("Fichier decoupé en "+blocs128.length+" blocs de 128 bits (=16 bytes) + 1 bloc de "+ blocInf128.length+" bytes");		
 		
 		// Contiendra tous les IV incrémentés.
@@ -58,13 +61,9 @@ public class Main{
 		KeyGenerator keyGen = KeyGenerator.getInstance("AES");
 		keyGen.init(128);
 		SecretKey secretKey = keyGen.generateKey();
-		byte secretKeyEncoded[] = secretKey.getEncoded();
 		File cipheredText = new File("cipheredText.txt");
-		Cipher encryptCipher = Cipher.getInstance("AES/ECB/NoPadding");
 		
-		// Generating secret key
-//		Anubis anubis = new Anubis(); // Cipher block algorithm.
-		
+		//Anubis anubis = new Anubis(); // Cipher block algorithm.
 		// Executing threads
 		boolean threadIsFree = false;
 		int numBlocEncours = 0;
@@ -78,7 +77,6 @@ public class Main{
 				for(indiceThreadNotAlive = 0 ; indiceThreadNotAlive < tabThread.length && !threadIsFree ; indiceThreadNotAlive++){
 					System.out.println("Thread["+indiceThreadNotAlive+"] : "+tabThread[indiceThreadNotAlive].getState());
 					if(tabThread[indiceThreadNotAlive].getState() != Thread.State.RUNNABLE && tabThread[indiceThreadNotAlive].getState() != Thread.State.TIMED_WAITING ){
-						System.out.println("IF");
 						threadIsFree = true;
 					}
 				}
@@ -87,16 +85,41 @@ public class Main{
 			System.out.println("indiceThreadNotAlive: "+indiceThreadNotAlive);
 			tabThread[indiceThreadNotAlive] = new Thread(new ThreadCTR( unBloc, 
 																		numBlocEncours, 
-																		cipheredText,
 																		secretKey,
-																		encryptCipher,
 																		initializationVectorIncremented[numBlocEncours] ));
 			tabThread[indiceThreadNotAlive].start();
-			for(int jjj=0 ; jjj<5 ; jjj++){
-				System.out.println("foo");
-			}
+			
 			System.out.println("Num bloc en cours: "+numBlocEncours++);
 			threadIsFree = false;
 		}
+		
+		// On attend que tous les threads se terminent
+		for(int i=0 ; i<tabThread.length ; i++){
+			try {
+				tabThread[i].join();
+			} catch (InterruptedException e) {e.printStackTrace();}
+		}
+		
+		System.out.println("FIN ENCRYPTION, AFFICHAGE DONNEES CRYPTEES:");
+		Cipher deciph = Cipher.getInstance("AES/CTR/NoPadding");
+		
+		FileOutputStream fos = new FileOutputStream(cipheredText);
+		for(int i=0 ; i<cipheredBloc128.length ; i++){
+			
+			try {deciph.init(Cipher.DECRYPT_MODE, secretKey, new IvParameterSpec(initializationVectorIncremented[i]));
+			} catch (InvalidKeyException e) {}
+			catch (InvalidAlgorithmParameterException e) {}
+			try {
+				System.out.println("Decrypted: "+new String(deciph.doFinal(cipheredBloc128[i])).toString());
+			} catch (IllegalBlockSizeException e) {
+			} catch (BadPaddingException e) {}
+			fos.write(cipheredBloc128[i]);
+		}
+	}
+	
+	public static void writeCipheredBloc(byte[] cipheredBlock, int numBloc128){
+		System.out.println("Ecriture du chiffré...");
+		cipheredBloc128[numBloc128] = cipheredBlock;
+		System.out.println("Fin écriture du chiffré...");
 	}
 }
