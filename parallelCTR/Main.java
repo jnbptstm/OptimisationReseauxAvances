@@ -1,32 +1,26 @@
 package parallelCTR;
 
+import gnu.crypto.cipher.Rijndael;
+
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileOutputStream;
 import java.io.IOException;
-import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
-import java.util.Scanner;
+import java.security.SecureRandom;
 
-import javax.crypto.BadPaddingException;
-import javax.crypto.Cipher;
-import javax.crypto.IllegalBlockSizeException;
-import javax.crypto.KeyGenerator;
 import javax.crypto.NoSuchPaddingException;
-import javax.crypto.SecretKey;
-import javax.crypto.spec.IvParameterSpec;
 
 public class Main{
 
 	public static byte[][] cipheredBloc128;
 	
-	public static void main (String args[]) throws NoSuchAlgorithmException, IOException, NoSuchPaddingException{
+	public static void main (String args[]) throws NoSuchAlgorithmException, IOException, NoSuchPaddingException, InterruptedException{
 		
-		int numberOfThread; // Number of thread
-		System.out.println("Nombre de threads désirés? ("+Runtime.getRuntime().availableProcessors()+" conseillés)");
-		Scanner sc = new Scanner(System.in);
-		numberOfThread = sc.nextInt();
+		int numberOfThread = 2; // Number of thread
+//		System.out.println("Nombre de threads désirés? ("+Runtime.getRuntime().availableProcessors()+" conseillés)");
+//		Scanner sc = new Scanner(System.in);
+//		numberOfThread = sc.nextInt();
 		Thread tabThread[] = new Thread[numberOfThread];
 		for(int i=0 ; i<tabThread.length ; i++) {
 			tabThread[i] = new Thread();
@@ -44,26 +38,32 @@ public class Main{
 		byte[][] initializationVectorIncremented;
 		if(blocInf128.length == 0){ initializationVectorIncremented = Utils.ivsIncremented(blocs128.length, 16); }
 		else{initializationVectorIncremented = Utils.ivsIncremented(blocs128.length + 1, 16);}
-		
-		System.out.println("Les "+ initializationVectorIncremented.length+" U:");
-		for(int i = 0 ; i < initializationVectorIncremented.length ; i++){
-			for(int j = 0 ; j < initializationVectorIncremented[i].length ; j++){
-				System.out.print(initializationVectorIncremented[i][j]+" ");
-			}
-			System.out.println();
-		}
+//		
+//		System.out.println("Les "+ initializationVectorIncremented.length+" U:");
+//		for(int i = 0 ; i < initializationVectorIncremented.length ; i++){
+//			for(int j = 0 ; j < initializationVectorIncremented[i].length ; j++){
+//				System.out.print(initializationVectorIncremented[i][j]+" ");
+//			}
+//			System.out.println();
+//		}
 				
 		
 		/*
-		 * We use AES algorithm with ECB mode and then XOR the result with plain text to obtain
-		 * CTR mode.
+		 * We use Rijndael algorithm and then XOR the result with plain text to obtain CTR mode.
 		 */
-		KeyGenerator keyGen = KeyGenerator.getInstance("AES");
-		keyGen.init(128);
-		SecretKey secretKey = keyGen.generateKey();
-		File cipheredText = new File("cipheredText.txt");
+		byte[] secretKeyInByte = new byte[16];
+		new SecureRandom().nextBytes(secretKeyInByte);
+	//	File cipheredText = new File("cipheredText.txt");
 		
-		//Anubis anubis = new Anubis(); // Cipher block algorithm.
+		Rijndael rijndael = new Rijndael(); // Cipher block algorithm.
+		
+		Object secretKey = null;
+		try {
+			secretKey = rijndael.makeKey(secretKeyInByte, 32);
+		} catch (InvalidKeyException e1) { e1.printStackTrace(); }
+
+		assert(secretKey != null);
+		
 		// Executing threads
 		boolean threadIsFree = false;
 		int numBlocEncours = 0;
@@ -82,16 +82,20 @@ public class Main{
 				}
 			}
 			indiceThreadNotAlive--;
-			System.out.println("indiceThreadNotAlive: "+indiceThreadNotAlive);
-			tabThread[indiceThreadNotAlive] = new Thread(new ThreadCTR( unBloc, 
+			//System.out.println("indiceThreadNotAlive: "+indiceThreadNotAlive);
+			tabThread[indiceThreadNotAlive] = new Thread(new ThreadCTR( rijndael,
+																		unBloc, 
 																		numBlocEncours, 
 																		secretKey,
 																		initializationVectorIncremented[numBlocEncours] ));
 			tabThread[indiceThreadNotAlive].start();
 			
-			System.out.println("Num bloc en cours: "+numBlocEncours++);
+			//System.out.println("Num bloc en cours: "+numBlocEncours++);
 			threadIsFree = false;
+			//Thread.currentThread().wait();
 		}
+		
+		/** OTHER VERSION: */
 		
 		// On attend que tous les threads se terminent
 		for(int i=0 ; i<tabThread.length ; i++){
@@ -101,20 +105,27 @@ public class Main{
 		}
 		
 		System.out.println("FIN ENCRYPTION, AFFICHAGE DONNEES CRYPTEES:");
-		Cipher deciph = Cipher.getInstance("AES/CTR/NoPadding");
+		//Cipher deciph = Cipher.getInstance("AES/CTR/NoPadding");
 		
-		FileOutputStream fos = new FileOutputStream(cipheredText);
-		for(int i=0 ; i<cipheredBloc128.length ; i++){
-			
-			try {deciph.init(Cipher.DECRYPT_MODE, secretKey, new IvParameterSpec(initializationVectorIncremented[i]));
-			} catch (InvalidKeyException e) {}
-			catch (InvalidAlgorithmParameterException e) {}
-			try {
-				System.out.println("Decrypted: "+new String(deciph.doFinal(cipheredBloc128[i])).toString());
-			} catch (IllegalBlockSizeException e) {
-			} catch (BadPaddingException e) {}
-			fos.write(cipheredBloc128[i]);
-		}
+//		for(int i = 0 ; i < cipheredBloc128.length ; i++){
+//			for(int j=0; j<cipheredBloc128[i].length ; j++){
+//				System.out.print(cipheredBloc128[i][j]+" ");
+//			}
+//			System.out.println();
+//		}
+		
+	//	FileOutputStream fos = new FileOutputStream(cipheredText);
+//		for(int i=0 ; i<cipheredBloc128.length ; i++){
+//			
+//			try {deciph.init(Cipher.DECRYPT_MODE, secretKey, new IvParameterSpec(initializationVectorIncremented[i]));
+//			} catch (InvalidKeyException e) {}
+//			catch (InvalidAlgorithmParameterException e) {}
+//			try {
+//				System.out.println("Decrypted: "+new String(deciph.doFinal(cipheredBloc128[i])).toString());
+//			} catch (IllegalBlockSizeException e) {
+//			} catch (BadPaddingException e) {}
+//			fos.write(cipheredBloc128[i]);
+//		}
 	}
 	
 	public static void writeCipheredBloc(byte[] cipheredBlock, int numBloc128){
