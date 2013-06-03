@@ -44,8 +44,6 @@ public class Utils {
 		byte initializationVector[] = new byte [lengthOfIv];
 		new SecureRandom().nextBytes(initializationVector);
 		
-		for(int i=0 ; i<initializationVector.length ; i++){ System.out.print(initializationVector[i]+" "); }
-		System.out.println();
 		BigInteger bigIntegerIV = new BigInteger(initializationVector);
 		
 		for(int i = 0 ; i < numberOfIv; i++){

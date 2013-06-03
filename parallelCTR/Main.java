@@ -73,7 +73,6 @@ public class Main{
 			/* 
 			 * 'numberOfThread' threads peuvent être executés en meme temps, il faut attendre la fin des autres sinon.
 			 */
-			
 			/** 
 			 * TODO: Cette partie de la gestion des threads est mal optimisée.
 			 */
